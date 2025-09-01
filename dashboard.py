@@ -104,6 +104,27 @@ with right:
             weight=4,
             popup=f"Route ID: {route}"
         ).add_to(delhi_map)
+        
+            # Draw route between selected stops
+    try:
+        source_coords = (
+            float(stop_names.iloc[int(source)]['stop_lat']),
+            float(stop_names.iloc[int(source)]['stop_lon'])
+        )
+        dest_coords = (
+            float(stop_names.iloc[int(dest)]['stop_lat']),
+            float(stop_names.iloc[int(dest)]['stop_lon'])
+        )
+
+        # Add markers for source and destination
+        folium.Marker(source_coords, popup="Source", icon=folium.Icon(color='green')).add_to(delhi_map)
+        folium.Marker(dest_coords, popup="Destination", icon=folium.Icon(color='red')).add_to(delhi_map)
+
+        # Add polyline between the two
+        folium.PolyLine(locations=[source_coords, dest_coords], color='blue', weight=4, opacity=0.7).add_to(delhi_map)
+
+    except Exception as e:
+        st.warning(f"Could not draw route: {e}")
 
     # ---- Display Map ----
     st_data = st_folium(delhi_map, width=800, height=600)
