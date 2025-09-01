@@ -6,9 +6,10 @@ A machine learning-powered system to predict travel time. It visualizes live con
 
 ##  Project Description
 
-This project uses **General Transit Feed Specification (GTFS)** datasets (stops, stop_times, trips, routes, shapes) to build a **Random Forest-based model** for travel time prediction across  Delhi. The final outcome is an interactive **Streamlit dashboard** using **Folium** maps, travel estimations, and route visuals.
+This project leverages Large Language Models (LLMs) via Groq to enhance the experience of travel time prediction and traffic insights across Delhi. Using curated datasets, it integrates predictive modeling with an interactive Streamlit dashboard, featuring Folium-based maps, real-time travel estimations, and intuitive route visualizations for a smoother and smarter user experience.
 
-<img width="1094" height="595" alt="skshoort" src="https://github.com/user-attachments/assets/99820d5b-674f-417b-9215-0a8f537af09f" />
+<img width="1279" height="628" alt="Screenshot (120)" src="https://github.com/user-attachments/assets/f9da63d5-e1c8-4033-9392-5246c1982b2d" />
+
 
 
 ---
@@ -65,13 +66,11 @@ An interactive UI for users to:
 | Feature | Description |
 |--------|-------------|
 | **Folium Map** | OpenStreetMap centered on Delhi |
-| **Circle Markers** | Show congestion on stops |
-| **Heatmap** | Density based on historical traffic |
 | **Stop Info** | Hover to view arrival/departure time |
 | **Prediction Box** | Select source → destination → hour |
 | **Graph** | Line graph of predicted vs actual |
 | **Route Visualizer** | Draws routes using `shapes.txt` |
-
+| **LLM(groq) insights** | A brief summary of routes and suggestions |
 ### Libraries Used (Dashboard):
 ```
 import streamlit as st
