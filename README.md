@@ -53,13 +53,17 @@ import matplotlib.pyplot as plt
 
 ##  Streamlit Dashboard
 
+<h3>Left Panel:</h3> Trip planner (source, destination, transport mode, traffic toggle) + LLM Travel Plan.
+
+<h3>Right Panel:</h3> Interactive map showing the selected route.
+
 An interactive UI for users to:
 
 - Select source and destination 
-- Choose hour of the day
-- Predict travel time using trained ML model
-- View  stops and congestion heatmap on **Folium (OpenStreetMap)**
+- Predict travel time using trained ML model and LLM advisory 
+- View  the routes  on **Folium (OpenStreetMap)**
 - Display signal points and their status
+- Option for selecting mode of transport 
 
 ###  Dashboard Features:
 
@@ -67,17 +71,28 @@ An interactive UI for users to:
 |--------|-------------|
 | **Folium Map** | OpenStreetMap centered on Delhi |
 | **Stop Info** | Hover to view arrival/departure time |
-| **Prediction Box** | Select source → destination → hour |
-| **Graph** | Line graph of predicted vs actual |
-| **Route Visualizer** | Draws routes using `shapes.txt` |
-| **LLM(groq) insights** | A brief summary of routes and suggestions |
+| **Prediction Box** | Select source → destination → plan |
+| **TomTom Routing API** | Provides optimized routes, travel time, distance, and real-time traffic delays |
+| **OpenWeather API** | Fetches temperature and weather conditions for the journey |
+| **LLM(groq) insights** | Generates a natural language summary with:
+• Travel time & distance
+• Expected traffic congestion hotspots
+• Weather impact
+• Suggestions (e.g., leave early, precautions) |
 ### Libraries Used (Dashboard):
 ```
 import streamlit as st
 import folium
-from folium.plugins import HeatMap
 from streamlit_folium import st_folium
+import requests
 import pandas as pd
+from dotenv import load_dotenv
+
+# APIs
+from services.tomtom_service import geocode_tomtom, route_tomtom
+from services.weather_service import weather_onecall
+from services.llm_service import ask_llm
+
 ```
 
 ---
