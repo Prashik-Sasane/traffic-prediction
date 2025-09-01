@@ -89,9 +89,15 @@ import pandas as pd
 from dotenv import load_dotenv
 
 # APIs
+
 from services.tomtom_service import geocode_tomtom, route_tomtom
+(https://developer.tomtom.com/)
+
 from services.weather_service import weather_onecall
+(https://openweathermap.org/)
+
 from services.llm_service import ask_llm
+(https://console.groq.com/home)
 
 ```
 
