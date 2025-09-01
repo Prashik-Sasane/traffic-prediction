@@ -66,19 +66,15 @@ An interactive UI for users to:
 - Option for selecting mode of transport 
 
 ###  Dashboard Features:
-
 | Feature | Description |
-|--------|-------------|
+|---------|-------------|
 | **Folium Map** | OpenStreetMap centered on Delhi |
 | **Stop Info** | Hover to view arrival/departure time |
 | **Prediction Box** | Select source → destination → plan |
 | **TomTom Routing API** | Provides optimized routes, travel time, distance, and real-time traffic delays |
 | **OpenWeather API** | Fetches temperature and weather conditions for the journey |
-| **LLM(groq) insights** | Generates a natural language summary with:
-                            • Travel time & distance
-                            • Expected traffic congestion hotspots
-                            • Weather impact
-                            • Suggestions (e.g., leave early, precautions) |
+| **LLM (Groq) insights** | Generates a natural language summary with:<br>• Travel time & distance<br>• Expected traffic congestion hotspots<br>• Weather impact<br>• Suggestions (e.g., leave early, precautions) |
+
 ### Libraries Used (Dashboard):
 ```
 import streamlit as st
