@@ -75,10 +75,10 @@ An interactive UI for users to:
 | **TomTom Routing API** | Provides optimized routes, travel time, distance, and real-time traffic delays |
 | **OpenWeather API** | Fetches temperature and weather conditions for the journey |
 | **LLM(groq) insights** | Generates a natural language summary with:
-• Travel time & distance
-• Expected traffic congestion hotspots
-• Weather impact
-• Suggestions (e.g., leave early, precautions) |
+                            • Travel time & distance
+                            • Expected traffic congestion hotspots
+                            • Weather impact
+                            • Suggestions (e.g., leave early, precautions) |
 ### Libraries Used (Dashboard):
 ```
 import streamlit as st
