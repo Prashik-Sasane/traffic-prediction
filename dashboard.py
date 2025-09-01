@@ -1,130 +1,110 @@
 import streamlit as st
 import folium
-from folium.plugins import HeatMap, FastMarkerCluster
 from streamlit_folium import st_folium
-import pandas as pd
-import matplotlib.colors as mcolors
 
-# ---- CONFIG ----
-st.set_page_config(layout="wide")
-st.title("🚦 Delhi Traffic Prediction Dashboard")
+# Import services
+from services.tomtom_service import geocode_tomtom, route_tomtom
+from services.weather_service import weather_onecall
+from services.llm_service import ask_llm
 
-# ---- LOAD & CACHE DATA ----
-@st.cache_data
-def load_cleaned():
-    df = pd.read_csv("Dataset/gtfs_cleaned.csv")  # Replace with your path
-    return df
 
-cleaned = load_cleaned()
+# ---------------------------- CONFIG ----------------------------
+st.set_page_config(page_title="Delhi Travel Planner", layout="wide")
+st.title("🚦 Travel Planner")
 
-# ---- UI LAYOUT ----
-left, right = st.columns([2, 3])
+# ---------------------------- HELPERS ----------------------------
+def human_eta(seconds: int):
+    if not seconds:
+        return "—"
+    m = int(round(seconds / 60.0))
+    return f"{m} min" if m < 90 else f"{m//60} h {m%60} min"
 
-# ---- LEFT PANEL ----
-with left:
-    st.header("📍 Plan a Route")
+def km(meters: int):
+    return "—" if not meters else f"{meters/1000:.1f} km"
 
-    # Unique Stops
-    stop_names = cleaned[['stop_id', 'stop_lat', 'stop_lon', 'stop_name']].drop_duplicates().reset_index(drop=True)
+# ---------------------------- SESSION STATE ----------------------------
+for key in ["src", "dst", "route", "weather", "llm", "map"]:
+    if key not in st.session_state:
+        st.session_state[key] = None
 
-    stop_dict = {
-        str(i): f"{row['stop_name']} (ID: {row['stop_id']})"
-        for i, row in stop_names.iterrows()
-    }
+# ---------------------------- LAYOUT ----------------------------
+col_left, col_right = st.columns([1, 1], gap="large")
 
-    source = st.selectbox("Select Source Stop", options=stop_dict.keys(), format_func=lambda x: stop_dict[x])
-    dest = st.selectbox("Select Destination Stop", options=stop_dict.keys(), format_func=lambda x: stop_dict[x])
-    hour = st.slider("Hour of Day", 0, 23, 8)
+# ---------- LEFT PANEL ----------
+with col_left:
+    st.subheader("📍 Plan your Trip")
 
-    if st.button("Predict Travel Time"):
-        src = int(stop_names.iloc[int(source)]['stop_id'])
-        dst = int(stop_names.iloc[int(dest)]['stop_id'])
+    # Top Inputs
+    src_text = st.text_input("Source", value="Connaught Place, New Delhi")
+    dst_text = st.text_input("Destination", value="Indira Gandhi International Airport, New Delhi")
+    mode = st.selectbox("Mode", ["car", "bicycle", "pedestrian"], index=0)
+    use_traffic = st.checkbox("Use live traffic", value=True)
 
-        route_df = cleaned[(cleaned['stop_id'].isin([src, dst])) & (cleaned['hour_of_day'] == hour)]
+    go = st.button("Calculate Plan", type="primary", use_container_width=True)
 
-        if not route_df.empty:
-            try:
-                src_time = route_df[route_df['stop_id'] == src]['arrival_sec'].values[0]
-                dst_time = route_df[route_df['stop_id'] == dst]['arrival_sec'].values[0]
-                predicted = abs(dst_time - src_time) // 60
-                st.success(f"🕒 Estimated Travel Time: {predicted} minutes")
-            except:
-                st.warning("⚠️ Could not calculate — missing time data.")
-        else:
-            st.warning("⚠️ No matching route found at this hour.")
+    st.markdown("---")
+    st.subheader("🤖 Travel Plan")
 
-    # ---- Chart: Avg Travel Time by Hour ----
-    st.subheader("📊 Avg Travel Time per Hour")
-    hourly_avg = cleaned.groupby('hour_of_day')['travel_time_sec'].mean().reset_index()
-    st.line_chart(hourly_avg.rename(columns={'travel_time_sec': 'Avg Travel Time (s)'}))
+    if st.session_state.llm:
+        st.write(st.session_state.llm)
+    else:
+        st.info("Travel plan will appear here after you calculate.")
 
-# ---- RIGHT PANEL ----
-with right:
-    st.header("🗺️ Interactive Route Map")
+# ---------- RIGHT PANEL ----------
+with col_right:
+    st.subheader("🗺️ Map View")
+    if st.session_state.map:
+        st_folium(st.session_state.map, width=700, height=700)
+    else:
+        st.info("Map will appear here once you calculate a route.")
 
-    delhi_map = folium.Map(location=[28.6139, 77.2090], zoom_start=12)
-
-    # ---- Marker Clusters ----
-    map_points = cleaned[['stop_lat', 'stop_lon']].dropna().drop_duplicates()
-    map_sample = map_points.sample(n=min(1000, len(map_points)), random_state=42)
-    marker_data = [(row['stop_lat'], row['stop_lon']) for _, row in map_sample.iterrows()]
-    FastMarkerCluster(marker_data).add_to(delhi_map)
-
-    # ---- Heatmap ----
-    avg_tt = cleaned.groupby(['stop_lat', 'stop_lon'])['travel_time_sec'].mean().reset_index()
-    heat_data = avg_tt.dropna()[['stop_lat', 'stop_lon', 'travel_time_sec']].values.tolist()
-    HeatMap(heat_data, radius=15, blur=10).add_to(delhi_map)
-
-    # ---- Route PolyLines ----
-    st.subheader("🛤️ Display Route Lines")
-
-    available_routes = cleaned[['trip_id']].dropna().drop_duplicates().sort_values('trip_id')
-    selected_routes = st.multiselect("Select Routes", available_routes['trip_id'], default=available_routes['trip_id'].tolist()[:3])
-
-    # Assign colors to routes
-    route_colors = list(mcolors.TABLEAU_COLORS.values())
-    route_color_map = {rid: route_colors[i % len(route_colors)] for i, rid in enumerate(available_routes['trip_id'])}
-
-    for route in selected_routes:
-        route_trips = cleaned[cleaned['trip_id'] == route]
-        if route_trips.empty:
-            continue
-
-        stop_id = route_trips['stop_id'].dropna().unique()
-        if len(stop_id) == 0:
-            continue
-
-        stop_id = stop_id[0]
-        shape_data = route_trips[route_trips['stop_id'] == stop_id].sort_values('stop_sequence')
-        shape_points = shape_data[['stop_lat', 'stop_lon']].dropna().values.tolist()
-
-        folium.PolyLine(
-            locations=shape_points,
-            color=route_color_map[route],
-            weight=4,
-            popup=f"Route ID: {route}"
-        ).add_to(delhi_map)
-        
-            # Draw route between selected stops
+# ---------------------------- ACTION (on button click) ----------------------------
+if go:
     try:
-        source_coords = (
-            float(stop_names.iloc[int(source)]['stop_lat']),
-            float(stop_names.iloc[int(source)]['stop_lon'])
-        )
-        dest_coords = (
-            float(stop_names.iloc[int(dest)]['stop_lat']),
-            float(stop_names.iloc[int(dest)]['stop_lon'])
-        )
+        # 1. Geocode
+        src = geocode_tomtom(src_text)
+        dst = geocode_tomtom(dst_text)
 
-        # Add markers for source and destination
-        folium.Marker(source_coords, popup="Source", icon=folium.Icon(color='green')).add_to(delhi_map)
-        folium.Marker(dest_coords, popup="Destination", icon=folium.Icon(color='red')).add_to(delhi_map)
+        if not src or not dst:
+            st.error("❌ Could not geocode one of the locations. Try a more specific name.")
+        else:
+            st.session_state.src = src
+            st.session_state.dst = dst
 
-        # Add polyline between the two
-        folium.PolyLine(locations=[source_coords, dest_coords], color='blue', weight=4, opacity=0.7).add_to(delhi_map)
+            # 2. Route
+            route = route_tomtom(src[0], src[1], dst[0], dst[1], mode=mode, traffic=use_traffic)
+            if not route:
+                st.error("❌ No route found. Try changing mode or locations.")
+            else:
+                st.session_state.route = route
+
+                # 3. Weather
+                wx = weather_onecall(dst[0], dst[1])
+                st.session_state.weather = wx if wx else None
+
+                # 4. LLM Travel Plan
+                cur = wx.get("main", {}) if wx else {}
+                llm_input = f"""
+Route: {src_text} → {dst_text}
+ETA: {human_eta(route['time_s'])}, Distance: {km(route['length_m'])}, Delay: {human_eta(route['delay_s'])}
+Weather: {cur.get('weather',[{'description':'—'}])[0]['description']}, {cur.get('temp','?')}°C.
+
+Give a short travel advisory with:
+1. Time, Distance, Traffic delays
+2. Where traffic is expected
+3. Weather (temperature, condition)
+4. Suggestions: leave early? precautions?
+"""
+                st.session_state.llm = ask_llm(llm_input)
+
+                # 5. Map
+                fmap = folium.Map(location=[(src[0]+dst[0])/2, (src[1]+dst[1])/2], zoom_start=12, control_scale=True)
+                folium.Marker(src, popup="Source", icon=folium.Icon(color="green")).add_to(fmap)
+                folium.Marker(dst, popup="Destination", icon=folium.Icon(color="red")).add_to(fmap)
+                if route.get("points"):
+                    folium.PolyLine(route["points"], color="blue", weight=5, opacity=0.8).add_to(fmap)
+
+                st.session_state.map = fmap
 
     except Exception as e:
-        st.warning(f"Could not draw route: {e}")
-
-    # ---- Display Map ----
-    st_data = st_folium(delhi_map, width=800, height=600)
+        st.error(f"⚠️ Error: {e}")
