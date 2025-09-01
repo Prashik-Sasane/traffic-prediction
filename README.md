@@ -126,3 +126,23 @@ You can containerize and deploy the app using Docker:
 docker build -t delhi-traffic-app .
 docker run -p 8501:8501 delhi-traffic-app 
 ```
+
+###Project structure 
+```
+traffic-prediction/
+│── streamlit_app.py # Main Streamlit application
+│── Dataset # folder for the dataset 
+│
+│── services/ # API service integrations
+│ ├── tomtom_service.py # Functions for TomTom Geocoding & Routing
+│ ├── weather_service.py # Functions for OpenWeather API
+| ├── llm_service.py # Functions for Grok API
+│
+│── .gitignore # Ignored files for Git
+│── docker-compose.yml # Docker Compose setup
+│── Dockerfile # Docker image setup
+│── requirements.txt # Python dependencies
+│── README.md # Project documentation
+```
+BUILD WITH HEART --
+LETS BUILD and MAKE CHANGE --
